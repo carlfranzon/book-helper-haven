@@ -74,7 +74,10 @@ const Navbar = () => {
                 </Button>
               </div>
             ) : (
-              <AuthModal />
+              // Using Button instead of directly using AuthModal component
+              <Button variant="default" onClick={() => {}}>
+                Sign In
+              </Button>
             )}
           </div>
 
@@ -142,9 +145,16 @@ const Navbar = () => {
                 </button>
               </>
             ) : (
-              <div className="py-2">
-                <AuthModal onClose={() => setIsMenuOpen(false)} />
-              </div>
+              // Using Button instead of directly using AuthModal component in mobile menu
+              <Button 
+                variant="default" 
+                className="w-full justify-center"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                }}
+              >
+                Sign In
+              </Button>
             )}
           </div>
         </div>
