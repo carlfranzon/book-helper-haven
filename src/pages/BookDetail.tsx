@@ -166,7 +166,9 @@ const BookDetail = () => {
                   <p className="text-foreground leading-relaxed">
                     {typeof book.description === 'string' 
                       ? book.description
-                      : book.description.value || ''}
+                      : typeof book.description === 'object' && book.description !== null && 'value' in book.description 
+                        ? book.description.value 
+                        : ''}
                   </p>
                 </div>
               )}
