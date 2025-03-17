@@ -21,7 +21,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/book/:bookKey" element={<BookDetail />} />
+            {/* Updated route pattern to match both /book/works/OL1234W and similar patterns */}
+            <Route path="/book/*" element={<BookDetail />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

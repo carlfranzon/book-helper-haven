@@ -19,8 +19,11 @@ const BookCard: React.FC<BookCardProps> = ({ book, size = 'medium' }) => {
     large: 'w-48',
   };
   
+  // Clean the book key to ensure it works with our routing
+  const bookPath = book.key?.startsWith('/') ? book.key.substring(1) : book.key;
+  
   return (
-    <Link to={`/book${book.key}`} className={`book-card block ${sizeClasses[size]} transition-transform hover:-translate-y-1`}>
+    <Link to={`/book/${bookPath}`} className={`book-card block ${sizeClasses[size]} transition-transform hover:-translate-y-1`}>
       <div className="relative overflow-hidden rounded-lg book-cover-shadow">
         <img 
           src={coverUrl} 
