@@ -5,8 +5,8 @@ import { Book, saveUserBookInteraction, getUserBookInteraction } from '@/service
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Star, BookOpen, BookPlus, Pencil } from 'lucide-react';
-import { AuthModal } from './AuthModal';
 import { toast } from '@/components/ui/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface BookReviewProps {
   book: Book;
@@ -14,13 +14,20 @@ interface BookReviewProps {
 }
 
 const BookReview: React.FC<BookReviewProps> = ({ book, onUpdate }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, login, signup, isLoading } = useAuth();
   const bookInteraction = getUserBookInteraction(book.key);
   
   const [isEditing, setIsEditing] = useState(false);
   const [review, setReview] = useState(bookInteraction?.review || '');
   const [rating, setRating] = useState(bookInteraction?.rating || 0);
   const [hasRead, setHasRead] = useState(bookInteraction?.hasRead || false);
+  
+  // Auth modal state
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('login');
+  const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [signupData, setSignupData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSaveReview = () => {
     saveUserBookInteraction({
@@ -64,12 +71,186 @@ const BookReview: React.FC<BookReviewProps> = ({ book, onUpdate }) => {
     }
   };
 
+  // Auth functions
+  const validateLogin = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!loginData.email) newErrors.loginEmail = 'Email is required';
+    if (!loginData.password) newErrors.loginPassword = 'Password is required';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateSignup = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!signupData.name) newErrors.signupName = 'Name is required';
+    if (!signupData.email) newErrors.signupEmail = 'Email is required';
+    if (!signupData.password) newErrors.signupPassword = 'Password is required';
+    if (signupData.password.length < 6) newErrors.signupPassword = 'Password must be at least 6 characters';
+    if (signupData.password !== signupData.confirmPassword) newErrors.signupConfirmPassword = 'Passwords do not match';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateLogin()) return;
+    
+    try {
+      await login(loginData.email, loginData.password);
+      setIsAuthModalOpen(false);
+    } catch (error) {
+      console.error('Login error:', error);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateSignup()) return;
+    
+    try {
+      await signup(signupData.name, signupData.email, signupData.password);
+      setIsAuthModalOpen(false);
+    } catch (error) {
+      console.error('Signup error:', error);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="p-6 bg-muted/30 rounded-lg text-center">
         <h3 className="text-lg font-medium mb-3">Want to review this book?</h3>
         <p className="text-muted-foreground mb-4">Sign in to add your review and track your reading progress.</p>
-        <AuthModal />
+        
+        {/* Use a regular Button instead of AuthModal to avoid DialogTrigger issue */}
+        <Button onClick={() => setIsAuthModalOpen(true)} className="bg-primary hover:bg-primary/90">
+          Sign In
+        </Button>
+        
+        {/* Auth dialog */}
+        <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl font-bold">Welcome to Book Haven</DialogTitle>
+              <DialogDescription className="text-center">
+                Sign in or create an account to track your books and write reviews
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="tabs w-full">
+              <div className="flex border-b mb-4">
+                <button
+                  className={`flex-1 py-2 text-center ${activeTab === 'login' ? 'border-b-2 border-primary font-medium' : 'text-muted-foreground'}`}
+                  onClick={() => setActiveTab('login')}
+                >
+                  Login
+                </button>
+                <button
+                  className={`flex-1 py-2 text-center ${activeTab === 'signup' ? 'border-b-2 border-primary font-medium' : 'text-muted-foreground'}`}
+                  onClick={() => setActiveTab('signup')}
+                >
+                  Sign Up
+                </button>
+              </div>
+              
+              {activeTab === 'login' ? (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="login-email" className="text-sm font-medium">Email</label>
+                    <input
+                      id="login-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={loginData.email}
+                      onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-md ${errors.loginEmail ? "border-red-500" : "border-input"}`}
+                    />
+                    {errors.loginEmail && <p className="text-red-500 text-xs">{errors.loginEmail}</p>}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="login-password" className="text-sm font-medium">Password</label>
+                    <input
+                      id="login-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={loginData.password}
+                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-md ${errors.loginPassword ? "border-red-500" : "border-input"}`}
+                    />
+                    {errors.loginPassword && <p className="text-red-500 text-xs">{errors.loginPassword}</p>}
+                  </div>
+                  
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Please wait..." : "Sign In"}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="signup-name" className="text-sm font-medium">Name</label>
+                    <input
+                      id="signup-name"
+                      placeholder="Your name"
+                      value={signupData.name}
+                      onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-md ${errors.signupName ? "border-red-500" : "border-input"}`}
+                    />
+                    {errors.signupName && <p className="text-red-500 text-xs">{errors.signupName}</p>}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="signup-email" className="text-sm font-medium">Email</label>
+                    <input
+                      id="signup-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={signupData.email}
+                      onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-md ${errors.signupEmail ? "border-red-500" : "border-input"}`}
+                    />
+                    {errors.signupEmail && <p className="text-red-500 text-xs">{errors.signupEmail}</p>}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="signup-password" className="text-sm font-medium">Password</label>
+                    <input
+                      id="signup-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={signupData.password}
+                      onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-md ${errors.signupPassword ? "border-red-500" : "border-input"}`}
+                    />
+                    {errors.signupPassword && <p className="text-red-500 text-xs">{errors.signupPassword}</p>}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="signup-confirm-password" className="text-sm font-medium">Confirm Password</label>
+                    <input
+                      id="signup-confirm-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={signupData.confirmPassword}
+                      onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-md ${errors.signupConfirmPassword ? "border-red-500" : "border-input"}`}
+                    />
+                    {errors.signupConfirmPassword && <p className="text-red-500 text-xs">{errors.signupConfirmPassword}</p>}
+                  </div>
+                  
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Creating account..." : "Create Account"}
+                  </Button>
+                </form>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -156,3 +337,4 @@ const BookReview: React.FC<BookReviewProps> = ({ book, onUpdate }) => {
 };
 
 export default BookReview;
+
