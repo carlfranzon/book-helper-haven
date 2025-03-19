@@ -12,7 +12,10 @@ interface BookCoverProps {
 }
 
 const BookCover: React.FC<BookCoverProps> = ({ book, interaction }) => {
-  const coverUrl = getCoverUrl(book.cover_i, 'L');
+  // Fixed: Use a placeholder if cover_i is undefined
+  const coverUrl = book.cover_i 
+    ? getCoverUrl(book.cover_i, 'L')
+    : 'https://via.placeholder.com/180x270?text=No+Cover';
   
   return (
     <div className="flex-shrink-0">
@@ -21,6 +24,10 @@ const BookCover: React.FC<BookCoverProps> = ({ book, interaction }) => {
           src={coverUrl} 
           alt={`Cover of ${book.title}`} 
           className="w-full h-auto"
+          onError={(e) => {
+            // Fallback if the OpenLibrary image fails to load
+            e.currentTarget.src = 'https://via.placeholder.com/180x270?text=No+Cover';
+          }}
         />
       </div>
       
